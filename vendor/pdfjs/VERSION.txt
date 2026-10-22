@@ -1,0 +1,2 @@
+pdfjs-dist 4.10.38 — legacy build (Apache-2.0), self-hosted so the site's CSP (script-src/worker-src 'self') allows it.
+Source: https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/

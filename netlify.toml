@@ -1,0 +1,61 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[build.environment]
+  # SUPABASE_URL / SUPABASE_ANON_KEY / SITE_URL are PUBLIC (anon key is RLS-protected,
+  # designed to ship to browsers). Omit them so the scanner still flags real leaks
+  # (SUPABASE_SERVICE_ROLE, GROQ_API_KEY, etc).
+  SECRETS_SCAN_OMIT_KEYS = "SUPABASE_URL,SUPABASE_ANON_KEY,SITE_URL"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Transition to Vercel: the client now calls /api/* (Vercel-native). On Netlify, rewrite those
+# to the existing functions so the Netlify deploy keeps working until the Vercel cutover is done.
+[[redirects]]
+  from = "/api/ai"
+  to = "/.netlify/functions/ai"
+  status = 200
+[[redirects]]
+  from = "/api/admin-ops"
+  to = "/.netlify/functions/admin-ops"
+  status = 200
+
+# ===== POST-BUILD PROCESSING =====
+[build.processing]
+  skip_processing = false
+[build.processing.html]
+  pretty_urls = true
+[build.processing.css]
+  bundle = false
+  minify = true
+[build.processing.js]
+  bundle = false
+  minify = true
+[build.processing.images]
+  compress = true
+
+# ===== STATIC ASSET CACHING =====
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800, stale-while-revalidate=86400"
+[[headers]]
+  for = "/favicon.png"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+# ===== SECURITY HEADERS =====
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), fullscreen=(self \"https://drive.google.com\"), display-capture=()"
+    Cross-Origin-Opener-Policy = "same-origin-allow-popups"
+    # CSP — esm.sh (supabase-js), Google Fonts, Supabase https+wss, Google Drive embeds.
+    # Groq is NOT here: the browser calls /.netlify/functions/ai (same-origin) instead.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://drive.google.com https://*.b-cdn.net; media-src 'self' blob: https://*.supabase.co https://commondatastorage.googleapis.com https://www.googleapis.com https://drive.google.com https://drive.usercontent.google.com https://*.googleusercontent.com https://*.googlevideo.com; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://video.bunnycdn.com; frame-src 'self' blob: https://*.supabase.co https://www.google.com https://maps.google.com https://www.openstreetmap.org https://drive.google.com https://docs.google.com https://www.youtube.com https://youtube.com https://iframe.mediadelivery.net; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests;"

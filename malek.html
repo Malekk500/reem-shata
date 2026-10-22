@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Site Analytics — Eng Reem Shata Physics</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --rose:#3753c9; --rose-deep:#283fa6; --burgundy:#13235c; --burgundy-deep:#0c1840;
+  --cream:#ffffff; --cream-2:#f4f7ff; --ink:#0e1526; --ink-2:#46506a; --ink-3:#828c9c;
+  --line:#dde6f6; --line-2:#e9eefb; --green:#1f9d55; --green-soft:#e3f5e9;
+  --amber:#d97706; --amber-soft:#fdecd1; --red:#c0392b; --red-soft:#fbe1dd;
+  --radius:14px; --shadow-sm:0 1px 2px rgba(19,35,92,.06); --shadow:0 6px 24px rgba(19,35,92,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--cream-2);color:var(--ink);-webkit-font-smoothing:antialiased}
+h1,h2,h3,.serif{font-family:'Playfair Display',Georgia,serif}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 18px 60px}
+.btn{font-family:inherit;font-weight:600;font-size:13px;padding:10px 16px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink-2);cursor:pointer;transition:.15s}
+.btn:hover{border-color:var(--rose);color:var(--rose)}
+.btn-primary{background:var(--rose);border-color:var(--rose);color:#fff}
+.btn-primary:hover{background:var(--rose-deep);color:#fff}
+.btn-dark{background:var(--burgundy);border-color:var(--burgundy);color:#fff}
+.btn-dark:hover{background:var(--burgundy-deep);color:#fff}
+
+/* login */
+#gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+  background:linear-gradient(150deg,var(--burgundy-deep),var(--burgundy) 55%,var(--rose-deep))}
+.gate-card{background:#fff;border-radius:18px;padding:34px 30px;width:100%;max-width:380px;box-shadow:0 22px 70px rgba(0,0,0,.3)}
+.gate-card h1{font-size:24px;color:var(--burgundy);margin-bottom:4px}
+.gate-card p{font-size:13px;color:var(--ink-3);margin-bottom:22px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--burgundy);margin-bottom:6px}
+.field input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--cream-2);font-family:inherit;font-size:15px;font-weight:500}
+.field input:focus{outline:none;border-color:var(--rose);box-shadow:0 0 0 3px rgba(55,83,201,.12);background:#fff}
+.err{display:none;background:var(--red-soft);color:var(--red);font-size:13px;font-weight:600;padding:10px 12px;border-radius:9px;margin-bottom:12px}
+.err.show{display:block}
+
+/* header */
+.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+.top h1{font-size:26px;color:var(--burgundy);line-height:1.15}
+.top .sub{font-size:13px;color:var(--ink-3);margin-top:3px}
+.top .sp{flex:1}
+.pill{font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;background:var(--green-soft);color:var(--green);white-space:nowrap}
+.pill.warn{background:var(--amber-soft);color:var(--amber)}
+select.month{padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-family:inherit;font-weight:600;font-size:13px;color:var(--ink-2)}
+
+/* kpi */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:#fff;border:1px solid var(--line-2);border-radius:var(--radius);padding:16px 17px;box-shadow:var(--shadow-sm)}
+.kpi .k-l{font-size:11.5px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.5px}
+.kpi .k-v{font-family:'Playfair Display',serif;font-size:31px;font-weight:700;color:var(--burgundy);line-height:1.1;margin-top:7px}
+.kpi .k-s{font-size:12px;color:var(--ink-3);margin-top:4px}
+.kpi .k-s.up{color:var(--green);font-weight:600}
+.kpi .k-s.down{color:var(--red);font-weight:600}
+.kpi .k-s.na{color:var(--amber);font-weight:600}
+
+/* cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px;margin-bottom:16px}
+.card{background:#fff;border:1px solid var(--line-2);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm)}
+.card h3{font-size:16px;color:var(--burgundy);margin-bottom:3px}
+.card .hint{font-size:12px;color:var(--ink-3);margin-bottom:14px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-2);font-size:13.5px}
+.row:last-child{border-bottom:0}
+.row .l{color:var(--ink-2)}
+.row .v{font-weight:700;color:var(--burgundy);white-space:nowrap}
+.bar{height:7px;border-radius:4px;background:var(--line-2);overflow:hidden;margin-top:6px}
+.bar > i{display:block;height:100%;background:var(--rose);border-radius:4px}
+.na-note{font-size:12.5px;color:var(--amber);background:var(--amber-soft);border-radius:9px;padding:9px 11px;line-height:1.5}
+.empty{padding:22px;text-align:center;color:var(--ink-3);font-size:13px}
+svg.chart{width:100%;height:130px;display:block;overflow:visible}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-3);margin-top:8px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-3);padding:8px 6px;border-bottom:1px solid var(--line)}
+td{padding:9px 6px;border-bottom:1px solid var(--line-2);color:var(--ink-2)}
+td b{color:var(--burgundy)}
+tr:last-child td{border-bottom:0}
+.sec-h{font-family:'Playfair Display',serif;font-size:19px;color:var(--burgundy);margin:26px 0 12px}
+.foot{margin-top:26px;font-size:11.5px;color:var(--ink-3);line-height:1.7;border-top:1px solid var(--line);padding-top:14px}
+
+@media (max-width:640px){
+  .wrap{padding:16px 13px 46px}
+  .top h1{font-size:22px}
+  .kpi .k-v{font-size:26px}
+  .grid{grid-template-columns:1fr}
+}
+/* print / PDF */
+@page{size:A4;margin:13mm}
+@media print{
+  body{background:#fff}
+  .no-print{display:none !important}
+  .wrap{max-width:none;padding:0}
+  .card,.kpi{box-shadow:none;break-inside:avoid;page-break-inside:avoid}
+  .sec-h{break-after:avoid}
+  .grid,.kpis{gap:10px}
+  .print-only{display:block !important}
+}
+.print-only{display:none}
+
+/* daily activity — plain HTML bars so the numbers stay readable (and print) */
+.dchart{display:flex;align-items:flex-end;gap:2px;padding-top:14px}
+.dcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0}
+.dcol .dn{font-size:9.5px;font-weight:700;color:var(--burgundy);line-height:1;margin-bottom:3px}
+.dcol .dn.z{color:var(--line)}
+.dcol .db{width:100%;max-width:26px;background:var(--rose);border-radius:3px 3px 0 0}
+.dcol .db.z{background:var(--line-2)}
+.dcol .dd{font-size:9px;color:var(--ink-3);margin-top:5px;line-height:1}
+.esp{display:inline-block;background:var(--rose);color:#fff;font-size:9.5px;font-weight:700;
+     padding:1px 6px;border-radius:20px;margin-left:6px;vertical-align:middle;letter-spacing:.3px}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <form class="gate-card" id="gate-form">
+    <h1>Site Analytics</h1>
+    <p>Eng Reem Shata Physics — private dashboard</p>
+    <div class="err" id="gate-err"></div>
+    <div class="field"><label>Username</label><input id="u" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>
+    <div class="field"><label>Password</label><input id="p" type="password" autocomplete="current-password" required></div>
+    <button class="btn btn-primary" style="width:100%;padding:12px" id="go">Sign in</button>
+  </form>
+</div>
+
+<!-- The report is NOT in this page. Its markup is built from the JSON that /api/analytics
+     returns, and that endpoint answers admins only — so opening this URL without an admin
+     login gives you the box above and an empty shell, whatever you do in devtools. -->
+<div class="wrap" id="app" style="display:none">
+  <div class="top">
+    <div>
+      <h1>Site Activity &amp; Performance</h1>
+      <div class="sub" id="range-sub">Loading…</div>
+    </div>
+    <div class="sp"></div>
+    <span class="pill" id="health">Checking…</span>
+    <select class="month no-print" id="month" onchange="loadAll()"></select>
+    <button class="btn no-print" onclick="loadAll()">Refresh</button>
+    <button class="btn btn-dark no-print" onclick="window.print()">Download PDF</button>
+    <button class="btn no-print" onclick="signOut()">Sign out</button>
+  </div>
+
+  <div class="print-only" style="margin-bottom:14px;font-size:12px;color:#46506a">
+    Platform report — generated <span id="gen-date"></span>
+  </div>
+
+  <div id="report"></div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL = 'https://mrapuyqbnbgntljpctzm.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yYXB1eXFibmJnbnRsanBjdHptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNzk2NzEsImV4cCI6MjA5Njk1NTY3MX0.zjc93DNar6_RW2V3_LLvSdJUtuT2t_5PPOAmkZPLRt8';
+const CLIENT_ID = 'shata';
+const EMAIL_DOMAIN = '@reemshata.app';
+
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, storage: window.localStorage,
+          lock: async (_n, _t, fn) => await fn() }
+});
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = (n) => (n == null || isNaN(n)) ? '—' : Number(n).toLocaleString();
+
+// ---------- auth gate: admins only ----------
+$('gate-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('go'), err = $('gate-err');
+  err.classList.remove('show');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    const email = $('u').value.toLowerCase().trim() + EMAIL_DOMAIN;
+    const { error } = await sb.auth.signInWithPassword({ email, password: $('p').value });
+    if (error) throw new Error('Incorrect username or password.');
+    const ok = await gateOk();
+    if (!ok){ await sb.auth.signOut(); throw new Error('This dashboard is for the site owner only.'); }
+    start();
+  } catch (ex) {
+    err.textContent = ex.message || 'Could not sign in.'; err.classList.add('show');
+  } finally { btn.disabled = false; btn.textContent = 'Sign in'; }
+});
+
+async function gateOk(){
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return false;
+  const { data } = await sb.from('profiles').select('role,client_id').eq('user_id', user.id).maybeSingle();
+  return !!(data && data.client_id === CLIENT_ID && data.role === 'admin');
+}
+window.signOut = async () => { await sb.auth.signOut(); location.reload(); };
+function start(){ $('gate').style.display = 'none'; $('app').style.display = 'block'; buildMonths(); loadAll(); }
+
+// All time first — it is the figure you compare against — then this month and the 11 before it.
+function buildMonths(){
+  const sel = $('month'); if (sel.options.length) return;
+  const now = new Date();
+  let html = '<option value="all">All time</option>';
+  for (let i = 0; i < 12; i++){
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const v = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    html += '<option value="' + v + '">' + d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) + '</option>';
+  }
+  sel.innerHTML = html;
+}
+
+async function loadAll(){
+  const rep = $('report');
+  rep.innerHTML = '<div class="empty">Loading…</div>';
+  let d;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) throw new Error('Your session has expired — sign in again.');
+    const r = await fetch('/api/analytics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+      body: JSON.stringify({ month: $('month').value || 'all' })
+    });
+    const out = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(out.error || ('Could not load the figures (HTTP ' + r.status + ')'));
+    d = out;
+  } catch (e) {
+    rep.innerHTML = '<div class="card"><div class="na-note">' + esc(e.message || 'Could not load the figures.') + '</div></div>';
+    $('health').textContent = 'Data unavailable'; $('health').className = 'pill warn';
+    return;
+  }
+  render(d);
+}
+
+function render(d){
+  const label = d.range.label;
+  const per = d.range.allTime ? 'all time' : label;
+  $('range-sub').textContent = label + ' · updated ' + new Date().toLocaleString(undefined, { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
+  $('gen-date').textContent = new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+  const healthy = !(d.errors && d.errors.length);
+  $('health').textContent = healthy ? 'Platform healthy' : 'Some data unavailable';
+  $('health').className = 'pill' + (healthy ? '' : ' warn');
+
+  const A = d.accounts, ac = d.active, hw = d.homework, up = d.upload, at = d.attendance, mk = d.marks, rc = d.recordings;
+  const ofAccounts = (n, p) => p + '% of ' + num(A.total) + ' accounts';
+
+  // ---------------- KPIs ----------------
+  const kpis = [
+    kpi('Active last 7 days', ac.last7, ofAccounts(ac.last7, ac.last7Pct)),
+    kpi(d.range.allTime ? 'Active all time' : 'Active this month', ac.range, ofAccounts(ac.range, ac.rangePct)),
+    kpi('Homework submitted', hw.submissions, num(hw.set) + ' assignment(s) set · ' + (hw.awaitingReview ? num(hw.awaitingReview) + ' awaiting review' : per)),
+    kpi('Photos uploaded', hw.photos, 'in ' + num(up.count) + ' upload(s)'),
+    kpi('Attendance records', at.records, num(at.registers) + ' register(s) taken'),
+    kpi('Upload speed', up.avgMs == null ? '—' : secs(up.avgMs),
+        up.avgMs == null ? 'no uploads measured yet' : num(up.count) + ' upload(s) · ' + num(up.files) + ' photo(s)')
+  ].join('');
+
+  // ---------------- daily activity ----------------
+  const days = Object.keys(d.byDay).sort();
+  const chart = days.length ? dayChart(d.byDay, days) : '<div class="empty">No sign-ins in this period.</div>';
+  const totalVisits = days.reduce((a, k) => a + d.byDay[k], 0);
+
+  const people =
+    row('Students', num(A.students)) +
+    row('Teacher &amp; assistants', num(A.staff)) +
+    row('All accounts', num(A.total)) +
+    row('Active last 7 days', num(ac.last7) + pct(ac.last7Pct)) +
+    row('Active in ' + esc(per), num(ac.range) + pct(ac.rangePct)) +
+    row('Busiest day', d.busiest ? (fmtFull(d.busiest.day) + ' — ' + d.busiest.n + ' people') : '—');
+
+  const plat = (d.platforms || []).length
+    ? d.platforms.map(p => row(esc(p.name), num(p.users) + pct(p.pct))).join('') +
+      '<div class="hint" style="margin:12px 0 0">Counted from the devices each account has signed in on.</div>'
+    : '<div class="empty">No devices recorded yet.</div>';
+
+  // ---------------- homework ----------------
+  const hwPanel =
+    row('Assignments set', num(hw.set)) +
+    (d.range.allTime
+      ? row('— currently assigned', num(hw.activeAssignments)) + row('— in history', num(hw.historicalAssignments))
+      : '') +
+    '<div class="hint" style="margin:12px 0">Counts distinct assignments in active homework and saved history, once per class. Finalizing does not remove an assignment from this count. Discarded or purged assignments with no saved results are excluded. Monthly totals use the original assignment date, not the finalization date.</div>' +
+    (hw.set == null
+      ? '<div class="na-note">Assignment total unavailable: ' +
+        ((!d.range.allTime && hw.undatedAssignments) ? num(hw.undatedAssignments) + ' historical assignment(s) have no unambiguous creation date. Choose All time to include them.' : 'the required records could not be fully loaded.') + '</div>'
+      : '') +
+    row('Homework submitted', num(hw.submissions)) +
+    (hw.awaitingReview ? row('— still awaiting review', num(hw.awaitingReview)) : '') +
+    row('Photos uploaded', num(hw.photos)) +
+    row('Students who submitted', num(hw.studentsSubmitted)) +
+    (hw.finalized
+      ? row('Marked Complete', num(hw.complete)) +
+        row('Marked Incomplete', num(hw.incomplete)) +
+        row('Not submitted', num(hw.missing)) +
+        (hw.excused ? row('Excused', num(hw.excused)) : '') +
+        row('Completion rate', hw.completionRate + '%') +
+        '<div class="bar"><i style="width:' + (hw.completionRate || 0) + '%"></i></div>'
+      : '<div class="na-note" style="margin-top:12px">Nothing has been finalized in this period yet, so Complete / Incomplete figures start with the first one.</div>');
+
+  const speedPanel = up.count
+    ? row('Average upload', '<b>' + secs(up.avgMs) + '</b>') +
+      row('Photos uploaded', num(up.files)) +
+      row('Uploads measured', num(up.count)) +
+      row('Data received', size(up.mb)) +
+      '<div class="na-note" style="margin-top:12px">' + speedVerdict(up.avgMs) + '</div>'
+    : '<div class="na-note">No uploads measured in this period yet. Every homework a student submits records how many seconds it took.</div>';
+
+  // ---------------- attendance / marks ----------------
+  const attPanel =
+    row('Registers taken', num(at.registers)) +
+    '<div class="hint" style="margin:12px 0">One register per group, level and lesson date, with saved attendance remaining. Re-saving does not add another register. Groups sharing a lesson name stay separate; later student moves do not change the original group.</div>' +
+    (at.registers == null
+      ? '<div class="na-note">Register total unavailable: ' +
+        (at.unattributedSheets ? num(at.unattributedSheets) + ' attendance sheet(s) have no matching saved class information.' : 'the required records could not be fully loaded.') + '</div>'
+      : '') +
+    row('Records saved', num(at.records)) +
+    row('Present', num(at.present)) +
+    row('Late', num(at.late)) +
+    row('Absent', num(at.absent)) +
+    row('Excused', num(at.excused)) +
+    (at.ratePct == null ? '' : row('Attendance rate', at.ratePct + '%') + '<div class="bar"><i style="width:' + at.ratePct + '%"></i></div>');
+
+  const marksPanel = mk.records
+    ? row('Marks recorded', num(mk.records)) +
+      row('Exams graded', num(mk.exams)) +
+      row('Students graded', num(mk.students)) +
+      row('Class average', mk.avgPct + '%')
+    : '<div class="empty">No marks entered in this period.</div>';
+
+  // ---------------- recordings ----------------
+  const tag = (e) => e ? '<span class="esp">ESPRESSO</span>' : '';
+  const recPanel =
+    row('Recordings available', num(rc.available) + ' <span style="font-weight:500;color:var(--ink-3)">(' + num(rc.espressoAvailable) + ' Espresso)</span>') +
+    row('Approved requests', rc.approved == null ? '—' : num(rc.approved)) +
+    // The library counts each recording's whole life, so on a single month the label has to
+    // say so at a glance rather than leaving it to the note underneath.
+    row('Minutes watched' + ((rc.lifetimeWatch && !d.range.allTime) ? ' <span style="font-weight:500;color:var(--ink-3)">· all time</span>' : ''),
+        rc.minutes ? '<b>' + num(rc.minutes) + '</b>' + hrs(rc.minutes) : '—') +
+    row('— from full lessons', num(rc.minutesFull) + hrs(rc.minutesFull)) +
+    row('— from Espresso', num(rc.minutesEspresso) + hrs(rc.minutesEspresso)) +
+    '<div class="hint" style="margin:12px 0 0">Counts requests currently marked approved, with an approval date in ' + esc(per) + '. Expired access still counts; repeat opens do not. Re-approvals replace the previous request decision. Espresso does not require approval.</div>' +
+    (rc.lifetimeWatch
+      ? '<div class="hint" style="margin:12px 0 0">Minutes watched comes from the video library and covers each recording since it was uploaded.</div>'
+      : '<div class="na-note" style="margin-top:12px">The video library could not be reached, so minutes watched shows only what this site has measured itself.</div>');
+
+  const recTable = (rc.top || []).length
+    ? '<table><thead><tr><th>Recording</th><th style="text-align:right">Approved</th><th style="text-align:right">Minutes</th></tr></thead><tbody>' +
+      rc.top.map(v => '<tr><td><b>' + esc(v.title) + '</b>' + tag(v.espresso) + '</td>' +
+        '<td style="text-align:right">' + (v.espresso || v.approved == null ? '—' : num(v.approved)) + '</td>' +
+        '<td style="text-align:right">' + (v.minutes ? num(v.minutes) : '—') + '</td></tr>').join('') +
+      '</tbody></table>'
+    : '<div class="empty">No recordings available.</div>';
+
+  const staffPanel = d.staff.total
+    ? '<table><thead><tr><th>Staff member</th><th style="text-align:right">Changes</th></tr></thead><tbody>' +
+      d.staff.top.map(s => '<tr><td><b>@' + esc(s.username) + '</b></td><td style="text-align:right">' + num(s.n) + '</td></tr>').join('') +
+      '</tbody></table>' +
+      '<div class="row" style="margin-top:10px"><span class="l">Total changes logged</span><span class="v">' + num(d.staff.total) + '</span></div>'
+    : '<div class="empty">No staff changes recorded in this period.</div>';
+
+  const perfPanel =
+    (up.count
+      ? row('Average photo upload', '<b>' + secs(up.avgMs) + '</b>') +
+        row('Median upload', secs(up.medMs)) +
+        row('Slowest 5% of uploads', 'over ' + secs(up.p95Ms)) +
+        row('Uploads measured', num(up.count))
+      : '<div class="na-note">Upload speed tracking is on, but no measurements have arrived in this period.</div>') +
+    '<div style="margin-top:12px">' +
+      row('AI helper questions asked', num(d.ai.questions)) +
+      row('Sign-ins recorded', num(d.signIns)) +
+      row('Database read errors', (d.errors && d.errors.length) ? esc(d.errors.join(', ')) : 'None') +
+    '</div>';
+
+  // ---------------- assemble ----------------
+  $('report').innerHTML =
+    '<div class="kpis">' + kpis + '</div>' +
+
+    '<div class="sec-h">Platform usage</div>' +
+    '<div class="grid">' +
+      card('Daily activity', 'People who signed in each day — ' + num(totalVisits) + ' across ' + days.length + ' day(s)', chart) +
+      card('Who is using the site', 'Accounts by role, and how many were active', people) +
+    '</div>' +
+    '<div class="grid">' +
+      card('Devices', 'What people open the site on, as a share of all accounts', plat) +
+    '</div>' +
+
+    '<div class="sec-h">Homework</div>' +
+    '<div class="grid">' +
+      card('Submissions', 'Assignments set, submitted and finalized', hwPanel) +
+      card('Upload speed', 'How long the site takes to accept a submission', speedPanel) +
+    '</div>' +
+
+    '<div class="sec-h">Attendance &amp; marks</div>' +
+    '<div class="grid">' +
+      card('Attendance', 'Registers taken and records saved', attPanel) +
+      card('Marks', 'Grading activity', marksPanel) +
+    '</div>' +
+
+    '<div class="sec-h">Recordings</div>' +
+    '<div class="grid">' +
+      card('Recording engagement', 'Approved requests and lesson watch time', recPanel) +
+      card('Staff activity', 'Changes made by the teacher and assistants', staffPanel) +
+    '</div>' +
+    '<div class="grid">' +
+      card('Recording approvals', 'Most approved first · combined across all groups', recTable) +
+    '</div>' +
+
+    '<div class="sec-h">Reliability &amp; speed</div>' +
+    card('Performance', 'How fast the site responds for students and staff', perfPanel) +
+
+    '<div class="foot">Figures cover <b>' + esc(label) + '</b> and are read straight from the live database — nothing on this page changes any record. ' +
+      'Sign-in history goes back to 14 June 2026. Watch time is measured from the day that tracking went live.</div>';
+}
+
+// ---------- small builders ----------
+function card(title, hint, inner){
+  return '<div class="card"><h3>' + title + '</h3><div class="hint">' + hint + '</div>' + inner + '</div>';
+}
+function kpi(label, value, sub){
+  return '<div class="kpi"><div class="k-l">' + esc(label) + '</div><div class="k-v">' +
+    (typeof value === 'number' ? num(value) : esc(value)) + '</div><div class="k-s">' + esc(sub) + '</div></div>';
+}
+function row(l, v){ return '<div class="row"><span class="l">' + l + '</span><span class="v">' + v + '</span></div>'; }
+function pct(p){ return ' <span style="font-weight:500;color:var(--ink-3)">(' + p + '%)</span>'; }
+function fmtFull(k){
+  return new Date(k + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+}
+// A big minute total stops meaning anything on its own — say the hours alongside it.
+function hrs(mins){
+  return (mins >= 120) ? ' <span style="font-weight:500;color:var(--ink-3)">(' + Math.round(mins / 60) + ' hrs)</span>' : '';
+}
+function size(mb){
+  if (!mb) return '—';
+  return (mb >= 1024) ? (mb / 1024).toFixed(1) + ' GB' : mb.toFixed(1) + ' MB';
+}
+function secs(ms){
+  if (ms == null) return '—';
+  const s = ms / 1000;
+  if (s < 1)  return Math.round(ms) + ' ms';
+  if (s < 10) return s.toFixed(1) + ' s';
+  if (s < 60) return Math.round(s) + ' s';
+  return (s / 60).toFixed(1) + ' min';
+}
+function speedVerdict(ms){
+  const s = ms / 1000;
+  if (s <= 5)  return '<b>Fast.</b> Uploads finish in about ' + secs(ms) + ' — students are not left waiting.';
+  if (s <= 15) return '<b>Comfortable.</b> Uploads average ' + secs(ms) + ', normal for photos taken on a phone.';
+  if (s <= 30) return '<b>A little slow.</b> Uploads average ' + secs(ms) + ' — usually large photos or a weak connection.';
+  return '<b>Slow.</b> Uploads average ' + secs(ms) + '. Worth checking photo sizes and the compression settings.';
+}
+// Every day gets its own labelled bar, so the chart can be read as numbers rather than shapes.
+function dayChart(byDay, days){
+  const max = Math.max(1, ...days.map(k => byDay[k]));
+  const wide = days.length <= 40;
+  const cols = days.map(k => {
+    const n = byDay[k];
+    const h = Math.max(n ? 3 : 2, Math.round((n / max) * 118));
+    const d = new Date(k + 'T00:00:00');
+    return '<div class="dcol" title="' + esc(fmtFull(k)) + ' — ' + n + ' people">' +
+      '<div class="dn' + (n ? '' : ' z') + '">' + n + '</div>' +
+      '<div class="db' + (n ? '' : ' z') + '" style="height:' + h + 'px"></div>' +
+      (wide ? '<div class="dd">' + d.getDate() + '</div>' : '') +
+    '</div>';
+  }).join('');
+  return '<div class="dchart">' + cols + '</div>' +
+    '<div class="legend"><span><i style="background:var(--rose)"></i>Peak ' + max + ' people in a day</span>' +
+    '<span>' + esc(fmtFull(days[0])) + ' → ' + esc(fmtFull(days[days.length - 1])) + '</span></div>';
+}
+
+window.loadAll = loadAll;
+
+// already signed in?
+(async () => { if (await gateOk()) start(); })();
+</script>
+</body>
+</html>

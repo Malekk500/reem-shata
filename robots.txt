@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /malek
+
+Sitemap: https://www.reemshataphysics.com/sitemap.xml

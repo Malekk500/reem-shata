@@ -1,0 +1,14 @@
+# Local Netlify folder
+.netlify
+.vercel
+.env*
+node_modules/
+.DS_Store
+**/.DS_Store
+.claude/
+.codex/
+.agents/
+*.log
+supabase/recovery/
+supabase/.temp/
+reemshata screenshots video/

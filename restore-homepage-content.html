@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Restore Homepage Content</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<h1>Restore Homepage Content</h1>
+<pre id="log"></pre>
+<script>
+const SUPABASE_URL = 'https://ztfqxajjzgdwabmhkubr.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0ZnF4YWpqemdkd2FibWhrdWJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjE1NjUxMTQsImV4cCI6MjAzNzE0MTExNH0.JVj-tJbKNmWsPQ91E2oFLe-v8qsPQQE-U8Y7MbGqYRU';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SITE_CLIENT_ID = 'shata';
+
+const log = document.getElementById('log');
+function print(msg) { log.textContent += msg + '\n'; console.log(msg); }
+
+async function restore() {
+  print('Starting homepage content restoration...\n');
+
+  // 1. Check if moments already exist
+  const { data: existingMoments } = await supabase
+    .from('homepage_moments')
+    .select('id')
+    .eq('client_id', SITE_CLIENT_ID)
+    .limit(1);
+
+  if (existingMoments && existingMoments.length > 0) {
+    print('⚠ Moments already exist in database. Skipping moments restoration.');
+  } else {
+    // Insert 5 original moment photos
+    const moments = [
+      { client_id: SITE_CLIENT_ID, photo_url: '/assets/moments/moment-1.webp', caption: 'Graduation celebration', sort_order: 1 },
+      { client_id: SITE_CLIENT_ID, photo_url: '/assets/moments/moment-2.webp', caption: 'Group photo', sort_order: 2 },
+      { client_id: SITE_CLIENT_ID, photo_url: '/assets/moments/moment-3.webp', caption: 'Awards ceremony', sort_order: 3 },
+      { client_id: SITE_CLIENT_ID, photo_url: '/assets/moments/moment-4.webp', caption: 'Class photo', sort_order: 4 },
+      { client_id: SITE_CLIENT_ID, photo_url: '/assets/moments/moment-5.webp', caption: 'Achievement day', sort_order: 5 }
+    ];
+
+    const { data: momentsData, error: momentsError } = await supabase
+      .from('homepage_moments')
+      .insert(moments)
+      .select();
+
+    if (momentsError) {
+      print('✗ Error inserting moments: ' + momentsError.message);
+    } else {
+      print('✓ Inserted ' + momentsData.length + ' moment photos');
+    }
+  }
+
+  // 2. Check if reviews already exist
+  const { data: existingReviews } = await supabase
+    .from('homepage_reviews')
+    .select('id')
+    .eq('client_id', SITE_CLIENT_ID)
+    .limit(1);
+
+  if (existingReviews && existingReviews.length > 0) {
+    print('⚠ Reviews already exist in database. Skipping reviews restoration.');
+  } else {
+    // Insert original parent reviews
+    const reviews = [
+      { client_id: SITE_CLIENT_ID, parent_name: 'Om Malak', review_text: 'My daughter improved tremendously. The explanations are clear and the practice materials really helped her understand physics concepts.', sort_order: 1 },
+      { client_id: SITE_CLIENT_ID, parent_name: 'Abu Ahmed', review_text: 'Excellent teaching methods. My son went from struggling to getting top marks. The recorded sessions are very helpful for review.', sort_order: 2 },
+      { client_id: SITE_CLIENT_ID, parent_name: 'Om Yasmine', review_text: 'Very organized and professional. The online platform makes it easy to track homework and progress. Highly recommended.', sort_order: 3 },
+      { client_id: SITE_CLIENT_ID, parent_name: 'Abu Sara', review_text: 'Great support and follow-up. Teacher really cares about student success. The materials are comprehensive and well structured.', sort_order: 4 }
+    ];
+
+    const { data: reviewsData, error: reviewsError } = await supabase
+      .from('homepage_reviews')
+      .insert(reviews)
+      .select();
+
+    if (reviewsError) {
+      print('✗ Error inserting reviews: ' + reviewsError.message);
+    } else {
+      print('✓ Inserted ' + reviewsData.length + ' parent reviews');
+    }
+  }
+
+  // 3. Update Ayten contact with full details (phone/email if columns exist)
+  const { data: aytenContact } = await supabase
+    .from('homepage_contacts')
+    .select('*')
+    .eq('client_id', SITE_CLIENT_ID)
+    .eq('name', 'Ayten Ismail')
+    .single();
+
+  if (aytenContact) {
+    const updates = {};
+    if ('phone' in aytenContact) updates.phone = '201206620028';
+    if ('email' in aytenContact) updates.email = 'info@reemshataphysics.com';
+
+    if (Object.keys(updates).length > 0) {
+      const { error: updateError } = await supabase
+        .from('homepage_contacts')
+        .update(updates)
+        .eq('id', aytenContact.id);
+
+      if (updateError) {
+        print('✗ Error updating Ayten contact: ' + updateError.message);
+      } else {
+        print('✓ Updated Ayten Ismail contact details');
+      }
+    } else {
+      print('ℹ Ayten contact exists (no phone/email columns to update)');
+    }
+  } else {
+    print('⚠ Ayten Ismail contact not found in database');
+  }
+
+  print('\n✓ Restoration complete!');
+  print('Refresh the homepage to see restored content.');
+}
+
+restore().catch(e => print('ERROR: ' + e.message));
+</script>
+</body>
+</html>

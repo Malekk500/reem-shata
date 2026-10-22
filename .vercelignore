@@ -1,0 +1,13 @@
+# Local credentials, tooling state, and database recovery material are not public assets.
+.env*
+.netlify
+.vercel
+.git
+.claude
+.codex
+.agents
+node_modules
+supabase
+*.sql
+**/.DS_Store
+reemshata screenshots video
