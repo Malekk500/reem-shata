@@ -1809,8 +1809,9 @@ body:not(.is-admin) [data-admin-only]{display:none!important}
           </div>
           <div class="card">
             <h3>Finalized homework — the permanent record</h3>
-            <p style="font-size:13px;color:var(--ink-2);margin-bottom:12px">Every homework you have finalized, newest first, with each student's result. Mixed something up? For 48 hours after finalizing you can still change a result here — statistics update instantly. After that the card is locked and stays here as the record.</p>
+            <p style="font-size:13px;color:var(--ink-2);margin-bottom:12px">Finalized homework from the last month, newest first. Results can be corrected for 30 days after finalizing. Choose All saved history to view older records; admins can reopen them with a new deadline.</p>
             <div class="form-grid">
+              <div class="field"><label for="hwhist-period">History period</label><select id="hwhist-period" onchange="paintHwHistory()"><option value="30">Last month (30 days)</option><option value="all">All saved history</option></select></div>
               <div class="field"><label for="hwhist-school">School / group</label><select id="hwhist-school" onchange="hwHistorySchoolChanged()"><option value="">All schools / groups</option></select></div>
               <div class="field"><label for="hwhist-track">Track</label><select id="hwhist-track" onchange="paintHwHistory()"><option value="">All tracks</option></select></div>
             </div>
@@ -1868,8 +1869,9 @@ body:not(.is-admin) [data-admin-only]{display:none!important}
         </div>
         <div data-mk-pane="recent" style="display:none">
         <div class="card">
-          <h3>Recent marks — editable for 1 week</h3>
-          <p style="font-size:13px;color:var(--ink-2);margin-bottom:12px">Every mark you entered in the last 7 days, newest first. Made a mistake? Change the score right here — the student's statistics update instantly.</p>
+          <h3>Marks history</h3>
+          <p style="font-size:13px;color:var(--ink-2);margin-bottom:12px">Marks entered in the last month, newest first. Choose All saved history to bring older marks back into view. Correct a score here to update the student's statistics.</p>
+          <div class="field"><label for="marks-history-period">History period</label><select id="marks-history-period" onchange="renderRecentMarks()"><option value="30">Last month (30 days)</option><option value="all">All saved history</option></select></div>
           <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn btn-dark btn-sm" onclick="renderRecentMarks()">Refresh</button></div>
           <div id="recent-marks"><div class="empty">Loading…</div></div>
         </div>
@@ -1934,8 +1936,9 @@ body:not(.is-admin) [data-admin-only]{display:none!important}
         <div data-att-pane="history" style="display:none">
           <div class="card">
             <h3>Past lessons — editable</h3>
-            <p style="font-size:13px;color:var(--ink-2);margin-bottom:12px">Every lesson you took attendance for in the last <b>7 days</b>, newest first. Marked someone absent by mistake? Change it here and the student's (and parent's) statistics update straight away.</p>
+            <p style="font-size:13px;color:var(--ink-2);margin-bottom:12px">Attendance from the last month, newest first. Choose All saved history to bring older lessons back into view. Correct a status here to update the student's and parent's statistics.</p>
             <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+              <select id="athist-period" aria-label="Attendance history period" onchange="renderAttHistory()" style="flex:1;min-width:180px"><option value="30">Last month (30 days)</option><option value="all">All saved history</option></select>
               <select id="athist-group" onchange="paintAttHistory()" style="flex:1;min-width:180px"></select>
               <div class="search-wrap" style="flex:1;min-width:180px"><svg class="s-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg><input id="athist-search" type="search" placeholder="Search student or lesson…" autocomplete="off" oninput="paintAttHistory()"><button type="button" class="s-x" onclick="clearSearchField('athist-search')" aria-label="Clear search">×</button></div>
               <button class="btn btn-dark btn-sm" onclick="renderAttHistory()">Refresh</button>
@@ -6128,7 +6131,7 @@ window.hwAssignDiscardDraft = () => {
 // Answers "what are students supposed to be working on, and by when?" without touching
 // a filter. Pure read: homework rows + submission counts + class sizes, scoped exactly as
 // the Submissions tab is (RLS + the assistant's schools). Admins can open the editor.
-const HW_DONE_WINDOW_DAYS = 14;
+const HW_DONE_WINDOW_DAYS = 30;
 function fmtShort(d){ return d ? new Date(String(d).length > 10 ? d : d + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) : '—'; }
 function hwaBadge(days){
   if (days === null) return '<span class="tag blue">Live</span>';
@@ -6161,7 +6164,7 @@ function hwaBuild(hws, subs, students, results){
     g.n++; if (r.status === 'submitted' || r.status === 'incomplete') g.ok++;
     if (r.finalized_at > g.at) g.at = r.finalized_at;
   });
-  const done = Object.values(groups).sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 8);
+  const done = Object.values(groups).sort((a, b) => String(b.at).localeCompare(String(a.at)));
   return { live, overdue, done, today };
 }
 // The teacher's instructions, exactly as the students see them ("pages 12-15, Q1-8").
@@ -6664,7 +6667,7 @@ window.hwFinalize = async (hwId) => {
     return;
   }
   if (!confirm('Save & finalize “' + rev.title + '” for all ' + reviewed.length + ' student(s)?' +
-      '\n\nEvery result is saved permanently and appears for the students and parents; the homework moves from Submissions to History. You can still correct a result for 48 hours in History.')) return;
+      '\n\nEvery result is saved permanently and appears for the students and parents; the homework moves from Submissions to History. You can still correct a result for 30 days in History.')) return;
   const rows = reviewed.map(uid => ({
     user_id: uid,
     status: statuses[uid],
@@ -6733,11 +6736,11 @@ window.admDelSub = async (hwId, uid) => {
   } catch (e) { alert('Could not delete submission: ' + (e.message || e)); }
 };
 
-// ---------- ADMIN: homework HISTORY (finalized results, editable for 48h) ----------
-// Groups homework_results by assignment. Within 48 hours of finalizing, every student's
+// ---------- ADMIN: homework HISTORY (finalized results, editable for 30 days) ----------
+// Groups homework_results by assignment. Within 30 days of finalizing, every student's
 // status can still be flipped (Completed / Incomplete / Missing) — the student's statistics
 // recompute from these rows, so a fix here shows up for the student instantly.
-const HW_EDIT_WINDOW_MS = 48 * 60 * 60 * 1000;
+const HW_EDIT_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 let _hwHistUsers = null;
 let _hwHistRows = null, _hwHistLoadId = 0;
 let _hwReopen = null, _hwReopenLoadId = 0;
@@ -6887,7 +6890,7 @@ window.renderHwHistory = async () => {
       rows.push(...page);
       if (page.length < pageSize) break;
     }
-    if (!_hwHistUsers) _hwHistUsers = await list('users', {});
+    if (!_hwHistUsers) _hwHistUsers = await list('users', { allRows: true });
   } catch (e) {
     if (loadId === _hwHistLoadId) wrap.innerHTML = '<div class="empty">Couldn\'t load homework history. Please refresh to try again.</div>';
     return;
@@ -6915,11 +6918,12 @@ window.paintHwHistory = () => {
     if (ts(r) > groups[k].newest) groups[k].newest = ts(r);
   });
   // Every finalized homework stays here as the permanent record. Results can be corrected
-  // for 48 hours (the server enforces the same window); after that the card is read-only.
+  // for 30 days (the server enforces the same window); older records stay viewable.
   const list_ = Object.values(groups)
+    .filter(g => $('hwhist-period').value === 'all' || (g.newest && Date.now() - new Date(g.newest).getTime() <= HW_EDIT_WINDOW_MS))
     .map(g => Object.assign(g, { locked: !g.newest || (Date.now() - new Date(g.newest).getTime()) >= HW_EDIT_WINDOW_MS }))
     .sort((a, b) => String(b.newest).localeCompare(String(a.newest))); // newest first
-  if (!list_.length){ wrap.innerHTML = '<div class="empty">No finalized homework yet.</div>'; return; }
+  if (!list_.length){ wrap.innerHTML = '<div class="empty">No finalized homework in this period. Choose All saved history to view older records.</div>'; return; }
   const stLabel = { submitted: 'Completed', incomplete: 'Incomplete', missing: 'Missing', excused: 'Excused', cancelled: 'Missing' };
   wrap.innerHTML = list_.map((g) => {
     const when = (g.newest || '').replace('T', ' ').slice(0, 16);
@@ -6948,7 +6952,7 @@ window.paintHwHistory = () => {
           '<p>' + escHtml(g.school) + ' · ' + escHtml(g.level) + (g.due ? ' · Due ' + escHtml(g.due) : '') + ' · finalized ' + escHtml(when || '—') + '</p></div>' +
           '<div class="hw-rev-actions">' + (g.locked
             ? '<span class="tag">Locked · results final</span>'
-            : '<span class="tag green">Editable for ' + Math.max(1, Math.ceil((HW_EDIT_WINDOW_MS - (Date.now() - new Date(g.newest).getTime())) / 3600000)) + 'h</span>') +
+            : '<span class="tag green">Editable for ' + Math.max(1, Math.ceil((HW_EDIT_WINDOW_MS - (Date.now() - new Date(g.newest).getTime())) / 86400000)) + ' more day(s)</span>') +
             (isAdmin(currentUser)
               ? '<button type="button" class="btn btn-dark btn-sm" onclick="hwHistReopenOpen(\'' + esc(g.title) + '\',\'' + esc(g.school) + '\',\'' + esc(g.level) + '\',\'' + esc(g.due) + '\',\'' + esc(g.newest) + '\')">Reopen</button>' +
                 '<button class="btn-del" onclick="hwHistDelete(\'' + esc(g.title) + '\',\'' + esc(g.school) + '\',\'' + esc(g.level) + '\',\'' + esc(g.due) + '\',' + g.rows.length + ')">Delete</button>'
@@ -6985,7 +6989,7 @@ window.hwHistSet = async (uid, title, school, level, due, status) => {
   }
   try {
     // Via the server (service role): RLS silently ignores staff UPDATEs on homework_results,
-    // so a direct client update "succeeds" while changing 0 rows. Server enforces the 48h too.
+    // so a direct client update "succeeds" while changing 0 rows. Server enforces 30 days too.
     await callAdminOps('update_hw_result', { hw_user_id: uid, homework_title: title, school, level, due: due || null, status, reason });
     await logActivity('Corrected a finalized homework result', title + ' → ' + status);
     await renderHwHistory();
@@ -7516,28 +7520,30 @@ window.admSubmitMarks = async () => {
   } catch (e) { alert('Could not record marks: ' + (e.message || e)); }
 };
 
-// ---------- ADMIN: recent marks — editable for 1 week ----------
-// Every mark entered in the last 7 days, newest exam first. Fixing a score updates the
+// ---------- ADMIN: marks history — one month by default, older records on request ----------
+// Every mark entered in the last 30 days, newest exam first. Fixing a score updates the
 // same row the student's statistics read from, so the correction shows up instantly.
-const MARK_EDIT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-let _rmGroups = {};
+const MARK_EDIT_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+let _rmGroups = {}, _rmLoadId = 0;
 window.renderRecentMarks = async () => {
   const wrap = $('recent-marks'); if (!wrap) return;
+  const loadId = ++_rmLoadId, actor = currentUser && currentUser.uid;
+  const allHistory = $('marks-history-period').value === 'all';
+  _rmGroups = {};
   wrap.innerHTML = '<div class="empty">Loading…</div>';
   let marks = [], users = [];
   try {
     const since = new Date(Date.now() - MARK_EDIT_WINDOW_MS).toISOString();
-    const r = await supabase.from('marks').select('*')
-      .eq('client_id', SITE_CLIENT_ID).gte('created_at', since)
-      .order('created_at', { ascending: false });
-    if (r.error) throw r.error;
-    marks = r.data || [];
-    users = await list('users', {});
-  } catch (e) { wrap.innerHTML = '<div class="empty">Couldn\'t load recent marks.</div>'; return; }
+    [marks, users] = await Promise.all([
+      list('marks', { allRows: true, ...(allHistory ? {} : { gte: { created_at: since } }), order: ['created_at', false] }),
+      list('users', { allRows: true })
+    ]);
+  } catch (e) { if (loadId === _rmLoadId) wrap.innerHTML = '<div class="empty">Couldn\'t load marks history.</div>'; return; }
+  if (loadId !== _rmLoadId || !currentUser || currentUser.uid !== actor) return;
   const sById = {}; users.forEach(u => { sById[u.id] = u; });
   // Scoped assistants only see marks for students in their schools.
   marks = marks.filter(m => { const s = sById[m.user_id]; return s && schoolAllowed(s.school); });
-  if (!marks.length){ wrap.innerHTML = '<div class="empty">No marks entered in the last 7 days.</div>'; return; }
+  if (!marks.length){ wrap.innerHTML = '<div class="empty">' + (allHistory ? 'No saved marks.' : 'No marks entered in the last month. Choose All saved history to view older marks.') + '</div>'; return; }
   const groups = {};
   marks.forEach(m => {
     (groups[m.exam] = groups[m.exam] || { exam: m.exam, newest: '', rows: [] }).rows.push(m);
@@ -7866,11 +7872,11 @@ window.admSaveAttendance = async () => {
   }
 };
 
-// ---------- ADMIN/ASSIST: ATTENDANCE HISTORY (last 7 days, editable) ----------
+// ---------- ADMIN/ASSIST: ATTENDANCE HISTORY (last month, or all saved history) ----------
 // Same idea as the homework History tab: a teacher can mis-tap, so every lesson from the
-// last week stays editable. Student and parent statistics read straight from these rows,
+// last month stays editable. Student and parent statistics read straight from these rows,
 // so a correction here shows up for them immediately — no extra bookkeeping.
-const ATT_HISTORY_DAYS = 7;
+const ATT_HISTORY_DAYS = 30;
 let _attHist = null, _attHistUsers = null, _attDayTaken = null, _attHistLoadId = 0, _attDeleting = false;
 window.admAttTab = (tab) => {
   document.querySelectorAll('[data-att-tab]').forEach(t => t.classList.toggle('active', t.dataset.attTab === tab));
@@ -7881,10 +7887,11 @@ window.renderAttHistory = async () => {
   const loadId = ++_attHistLoadId, actor = currentUser && currentUser.uid;
   _attHist = null; _attHistUsers = null; _attDayTaken = null;
   wrap.innerHTML = '<div class="empty">Loading…</div>';
-  const cutoff = new Date(Date.now() - ATT_HISTORY_DAYS * 86400000).toISOString().slice(0, 10);
+  const allHistory = $('athist-period').value === 'all';
+  const cutoff = allHistory ? '' : new Date(Date.now() - ATT_HISTORY_DAYS * 86400000).toISOString().slice(0, 10);
   let att = [], students = [];
   try { [att, students] = await Promise.all([
-    list('attendance', { gte: { lesson_date: cutoff }, order: ['lesson_date', false] }),
+    list('attendance', { ...(cutoff ? { gte: { lesson_date: cutoff } } : {}), order: ['lesson_date', false] }),
     list('users', { allRows: true })
   ]); }
   catch (e){
@@ -7948,7 +7955,7 @@ window.paintAttHistory = () => {
       ((r.s.name || '') + ' ' + (r.s.username || '') + ' ' + x.lesson).toLowerCase().includes(q)) }))
     .filter(x => x.rows.length || x.lesson.toLowerCase().includes(q));
   if (!sessions.length){
-    wrap.innerHTML = '<div class="empty">' + ((group || q) ? 'Nothing matches that filter.' : 'No attendance taken in the last ' + ATT_HISTORY_DAYS + ' days.') + '</div>';
+    wrap.innerHTML = '<div class="empty">' + ((group || q) ? 'Nothing matches that filter.' : $('athist-period').value === 'all' ? 'No saved attendance.' : 'No attendance taken in the last month. Choose All saved history to view older lessons.') + '</div>';
     return;
   }
   wrap.innerHTML = sessions.map(sess => {
@@ -9905,7 +9912,7 @@ window.schSave = async (i) => {
   }
 };
 // A rename rewrites the name in every table that stores it. homework_results has no staff
-// UPDATE policy (see the 48h correction path), so the whole move runs server-side with the
+// UPDATE policy (see the 30-day correction path), so the whole move runs server-side with the
 // service role in ONE admin-only operation — never half here and half there.
 async function schRenameCascade(oldName, newName){
   const n = _schCounts[oldName] || 0;

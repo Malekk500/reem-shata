@@ -112,7 +112,7 @@ exports.handler = async function (event) {
     }
     // ---- update_hw_result (staff) — correct a finalized homework status. RLS has no staff
     // UPDATE policy on homework_results (client updates silently touch 0 rows), so the fix
-    // runs here with the service role. The 48h edit window is enforced server-side too.
+    // runs here with the service role. The 30-day edit window is enforced server-side too.
     // ---- rename_school (owner) — a school's NAME is the key that half a dozen tables join
     // on, so renaming it has to rewrite every one of them or its students and its content are
     // orphaned. homework_results has no staff UPDATE policy (see update_hw_result above), so
@@ -152,7 +152,7 @@ exports.handler = async function (event) {
       const { hw_user_id, homework_title, school, level, due, status, reason } = body;
       if (!hw_user_id || !homework_title || !school || !level) return bad(400, 'Missing fields');
       if (!['submitted', 'incomplete', 'missing', 'excused'].includes(status)) return bad(400, 'Bad status');
-      const cutoff = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
+      const cutoff = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
       // The reason only belongs to an excused result; any other status clears it.
       let q = admin.from('homework_results').update({ status, reason: status === 'excused' ? (typeof reason === 'string' && reason.trim() ? reason.trim().slice(0, 300) : null) : null })
         .eq('client_id', SITE_CLIENT_ID).eq('user_id', hw_user_id)
@@ -161,7 +161,7 @@ exports.handler = async function (event) {
       q = due ? q.eq('due', due) : q.is('due', null);
       const { data, error } = await q.select('id');
       if (error) { console.error('[admin-ops] update_hw_result:', error.message); return bad(500, 'Could not update the result.'); }
-      if (!data || !data.length) return bad(409, 'This homework is older than 48 hours — it can no longer be edited.');
+      if (!data || !data.length) return bad(409, 'No editable result was found. Homework results can be corrected for 30 days after finalizing.');
       return ok({ ok: true, updated: data.length });
     }
     // ---- set_username (owner only) — rename a login. The sign-in email IS the username
