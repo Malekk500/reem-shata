@@ -3359,7 +3359,7 @@ window.doSignOut = async () => {
   // inherit a live roster or set of scores from the last one.
   attState = null; examState = null;
   mkScriptReset();
-  _hwChanged = {}; _hwRevLoaded = null; _hwStatus = {}; _hwRev = {}; hwReviewSubs = {}; _hwPending = {}; _hwReviewedBy = {}; _hwrMine = {}; hwSyncStop();
+  _hwChanged = {}; _hwRevLoaded = null; _hwStatus = {}; _hwRev = {}; hwReviewSubs = {}; _hwPending = {}; hwSyncStop();
   try {
     ['att-resume', 'mk-resume', 'hwrev-resume', 'hwassign-resume'].forEach(id => { const el = $(id); if (el) el.innerHTML = ''; });
     const rc = $('att-roster-card'), ec = $('exam-roster-card');
@@ -6250,7 +6250,7 @@ window.hwaReview = (school, level) => {
 // In-memory map of resolved submissions for the lightbox: key `${hwId}__${uid}`
 // → { photos:[storagePaths], signed:[signedUrls] }.
 let hwReviewSubs = {};
-let _hwRev = {}, _hwStatus = {}, _hwReviewedBy = {};
+let _hwRev = {}, _hwStatus = {};
 // Which class is on screen, and every status the reviewer set BY HAND (the automatic
 // Completed/Missing defaults are recomputed each time, so only real decisions are kept).
 let _hwRevLoaded = null, _hwChanged = {};
@@ -6288,7 +6288,7 @@ async function admHwReviewInner(opts){
       catch (_) { /* Render a reviewable fallback row even if the old profile is unavailable. */ }
     }
   } catch (e) { wrap.innerHTML = '<div class="empty">Couldn\'t load homework review.</div>'; return; }
-  const previousStatuses = _hwChanged, previousReasons = _hwReason, previousReviewers = _hwReviewedBy;
+  const previousStatuses = _hwChanged, previousReasons = _hwReason;
   const pendingStatuses = {}, pendingReasons = {};
   Object.keys(_hwStatus).forEach(id => Object.keys(_hwStatus[id] || {}).forEach(uid => {
     if (!_hwPending[id + '__' + uid]) return;
@@ -6296,15 +6296,12 @@ async function admHwReviewInner(opts){
     (pendingReasons[id] = pendingReasons[id] || {})[uid] = (_hwReason[id] || {})[uid] || '';
   }));
   DATA.homework = hwList;
-  hwReviewSubs = {}; _hwRev = {}; _hwStatus = {}; _hwReason = {}; _hwReviewedBy = {};
+  hwReviewSubs = {}; _hwRev = {}; _hwStatus = {}; _hwReason = {};
   // Statuses set on a previous visit to THIS class and never finalized come back with it.
   _hwRevLoaded = { school: s, level: l };
   const keptRev = readDraft('hwreview');
   _hwChanged = (keptRev && keptRev.data.school === s && keptRev.data.level === l && keptRev.data.changed && typeof keptRev.data.changed === 'object')
     ? keptRev.data.changed : {};
-  Object.entries(_hwChanged).forEach(([id, decisions]) => {
-    _hwReviewedBy[id] = Object.fromEntries(Object.keys(decisions).map(uid => [uid, currentUser.uid]));
-  });
   // ONE shared state per homework. When the homework_reviews table exists, the server copy
   // is the truth for everyone: every tap is written there at once and every open review
   // page re-reads it every 3 s (see hwSyncTick). The device-local draft is only a fallback
@@ -6314,33 +6311,29 @@ async function admHwReviewInner(opts){
     const sch = await hwSchema();
     if (sch.reviews){
       _hwServerSync = true;
-      const server = {}, reviewers = {};
+      const server = {};
       if (hwList.length){
-        const { data, error } = await supabase.from('homework_reviews').select('homework_id,user_id,status,reason,reviewed_by')
+        const { data, error } = await supabase.from('homework_reviews').select('homework_id,user_id,status,reason')
           .eq('client_id', SITE_CLIENT_ID).in('homework_id', hwList.map(h => h.id));
         if (error) throw error;
         if (!error) (data || []).forEach(r => {
           (server[r.homework_id] = server[r.homework_id] || {})[r.user_id] = r.status;
-          (reviewers[r.homework_id] = reviewers[r.homework_id] || {})[r.user_id] = r.reviewed_by || '';
           if (r.reason) (_hwReason[r.homework_id] = _hwReason[r.homework_id] || {})[r.user_id] = r.reason;
         });
       }
       _hwChanged = server;
-      _hwReviewedBy = reviewers;
       dropDraft('hwreview');          // a local copy would only drift from the shared one
     }
   } catch(_){
     // A failed read is not an empty review. Keep known decisions until sync recovers.
     _hwChanged = previousStatuses;
     _hwReason = previousReasons;
-    _hwReviewedBy = previousReviewers;
     _hwSyncNote = 'Could not refresh shared decisions. Your current results are still here; shared updates will resume when the connection recovers.';
   }
   // A sync redraw must not erase a decision whose save is still in flight or failed.
   Object.keys(pendingStatuses).forEach(id => {
     Object.assign(_hwChanged[id] = _hwChanged[id] || {}, pendingStatuses[id]);
     Object.assign(_hwReason[id] = _hwReason[id] || {}, pendingReasons[id]);
-    Object.assign(_hwReviewedBy[id] = _hwReviewedBy[id] || {}, Object.fromEntries(Object.keys(pendingStatuses[id]).map(uid => [uid, currentUser.uid])));
   });
   // What this page is showing — the sync tick compares against it to spot a homework that a
   // colleague finalized or a new upload that just arrived, and re-renders only then.
@@ -6401,8 +6394,6 @@ async function admHwReviewInner(opts){
             HW_REVIEW_FILTERS.map(([k, lbl]) =>
               '<button type="button" class="chip' + (k === (_hwrFilter[h.id] || 'all') ? ' on' : '') + '" aria-pressed="' + (k === (_hwrFilter[h.id] || 'all')) + '" data-f="' + k + '" onclick="hwrSetFilter(\'' + esc(h.id) + '\',\'' + k + '\')">' + lbl + '</button>').join('') +
           '</div>' +
-          '<label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px"><input type="checkbox"' + (_hwrMine[h.id] ? ' checked' : '') + ' onchange="hwrSetMine(\'' + esc(h.id) + '\',this.checked)">Only my decisions</label>' +
-          '<p style="font-size:12px;color:var(--ink-3);margin-top:6px">Filters use the review status selected, whether or not a file was uploaded.</p>' +
         '</div>' +
         '<div class="list-count" id="hwrcount-' + esc(h.id) + '"></div>' +
         '<div id="hwrlist-' + esc(h.id) + '">' + students.map(st => hwrRow(h.id, st)).join('') + '</div>' +
@@ -6463,12 +6454,8 @@ window.hwExcReason = (hwId, uid) => {
   if (_hwServerSync) hwPushStatus(hwId, uid, HW_EXCUSED); else saveHwRevDraft();
 };
 // Search + status filter for one card; also the "reviewed so far" progress in its header.
-const HW_REVIEW_FILTERS = [['all', 'All'], ['none', 'Not reviewed'], ['reviewed', 'Reviewed'], ['submitted', 'Submitted'], ['incomplete', 'Incomplete'], ['missing', 'Did not submit'], ['excused', 'Excused']];
-let _hwRoster = {}, _hwrFilter = {}, _hwrMine = {};
-window.hwrSetMine = (hwId, onlyMine) => {
-  _hwrMine[hwId] = !!onlyMine;
-  hwrFilter(hwId);
-};
+const HW_REVIEW_FILTERS = [['all', 'All'], ['none', 'Not reviewed'], ['uploaded', 'File uploaded'], ['submitted', 'Submitted'], ['incomplete', 'Incomplete'], ['missing', 'Did not submit'], ['excused', 'Excused']];
+let _hwRoster = {}, _hwrFilter = {};
 window.hwrSetFilter = (hwId, f) => {
   if (!HW_REVIEW_FILTERS.some(([key]) => key === f)) return;
   _hwrFilter[hwId] = f;
@@ -6484,22 +6471,21 @@ window.hwrFilter = (hwId) => {
   const q = (($('hwrq-' + hwId) || {}).value || '').trim().toLowerCase();
   const f = _hwrFilter[hwId] || 'all';
   const st = _hwStatus[hwId] || {};
-  const reviewers = _hwReviewedBy[hwId] || {}, onlyMine = !!_hwrMine[hwId];
-  const counts = { all: 0, none: 0, reviewed: 0, submitted: 0, incomplete: 0, missing: 0, excused: 0 };
+  const counts = { all: 0, none: 0, uploaded: 0, submitted: 0, incomplete: 0, missing: 0, excused: 0 };
   let shown = 0, total = 0, reviewed = 0;
   list_.querySelectorAll('.stu-row').forEach(r => {
     total++;
     const cur = st[r.dataset.uid] || '';
     if (cur) reviewed++;
-    const okReviewer = !onlyMine || !!(currentUser && reviewers[r.dataset.uid] === currentUser.uid);
-    if (okReviewer){
-      counts.all++;
-      counts[cur ? 'reviewed' : 'none']++;
-      if (cur && counts[cur] !== undefined) counts[cur]++;
-    }
+    const submission = hwReviewSubs[hwId + '__' + r.dataset.uid];
+    const hasFile = !!(submission && photoPaths(submission.photos).length);
+    counts.all++;
+    if (!cur) counts.none++;
+    if (hasFile) counts.uploaded++;
+    if (cur && counts[cur] !== undefined) counts[cur]++;
     const okQ = !q || (r.dataset.search || '').indexOf(q) !== -1;
-    const okF = f === 'all' || (f === 'none' ? !cur : f === 'reviewed' ? !!cur : cur === f);
-    const ok = okQ && okF && okReviewer;
+    const okF = f === 'all' || (f === 'none' ? !cur : f === 'uploaded' ? hasFile : cur === f);
+    const ok = okQ && okF;
     r.classList.toggle('hide', !ok);
     if (ok) shown++;
   });
@@ -6513,7 +6499,7 @@ window.hwrFilter = (hwId) => {
   const cnt = $('hwrcount-' + hwId);
   if (cnt){
     const bits = ['<b>' + reviewed + '</b> of ' + total + ' reviewed', left ? left + ' still to review' : 'everyone reviewed'];
-    if (q || f !== 'all' || onlyMine) bits.push('showing ' + shown + (onlyMine ? ' of my decisions' : ''));
+    if (q || f !== 'all') bits.push('showing ' + shown);
     cnt.innerHTML = total ? bits.join('<span class="lc-sep">•</span>') : '';
   }
   const prog = $('hwprog-' + hwId);
@@ -6531,7 +6517,6 @@ window.hwSetStatus = (hwId, uid, status) => {
     delete _hwReason[hwId][uid];                  // no longer excused → the reason goes with it
   }
   (_hwStatus[hwId] = _hwStatus[hwId] || {})[uid] = status;
-  (_hwReviewedBy[hwId] = _hwReviewedBy[hwId] || {})[uid] = currentUser.uid;
   (_hwChanged[hwId] = _hwChanged[hwId] || {})[uid] = status;
   hwrPaintRow(hwId, uid);
   hwrFilter(hwId);
@@ -6554,8 +6539,6 @@ function hwrPaintRow(hwId, uid){
 let _hwPending = {};
 async function hwPushStatus(hwId, uid, status, attempt){
   if (!currentUser) return;
-  (_hwReviewedBy[hwId] = _hwReviewedBy[hwId] || {})[uid] = currentUser.uid;
-  hwrFilter(hwId);
   const key = hwId + '__' + uid;
   _hwPending[key] = Date.now();
   let failed = null;
@@ -6584,7 +6567,7 @@ async function hwPushStatus(hwId, uid, status, attempt){
 let _hwSyncTimer = null, _hwSyncBusy = false, _hwSyncSig = '', _hwServerSync = false, _hwSyncNote = '';
 function hwSyncSignature(hwList, subs){
   return (hwList || []).map(h => h.id).sort().join(',') + '|' +
-         (subs || []).map(x => x.homework_id + '__' + x.user_id).sort().join(',');
+         (subs || []).map(x => x.homework_id + '__' + x.user_id + ':' + photoPaths(x.photos).join(';')).sort().join(',');
 }
 function hwSyncNoteHtml(){
   if (!_hwSyncNote) return '';
@@ -6606,7 +6589,7 @@ async function hwSyncTick(){
     //    a student's upload arrive? Those need the full sheet redrawn — a cheap id-only check.
     const [hwNow, subNow] = await Promise.all([
       supabase.from('homework').select('id').eq('client_id', SITE_CLIENT_ID).eq('school', school).eq('level', level),
-      ids.length ? supabase.from('homework_submissions').select('homework_id,user_id').eq('client_id', SITE_CLIENT_ID).in('homework_id', ids)
+      ids.length ? supabase.from('homework_submissions').select('homework_id,user_id,photos').eq('client_id', SITE_CLIENT_ID).in('homework_id', ids)
                  : Promise.resolve({ data: [], error: null })
     ]);
     if (Object.keys(_hwFinalizing).length) return;
@@ -6625,7 +6608,7 @@ async function hwSyncTick(){
     // 2. Decisions made by others: apply in place, no redraw. Never clobber a tap of our own
     //    that is still in flight.
     if (!_hwServerSync || !ids.length) return;
-    const { data, error } = await supabase.from('homework_reviews').select('homework_id,user_id,status,reason,reviewed_by')
+    const { data, error } = await supabase.from('homework_reviews').select('homework_id,user_id,status,reason')
       .eq('client_id', SITE_CLIENT_ID).in('homework_id', ids);
     if (error || Object.keys(_hwFinalizing).length) return;
     const touched = new Set();
@@ -6634,9 +6617,7 @@ async function hwSyncTick(){
       if (HW_STATUSES.indexOf(r.status) === -1) return;
       const curReason = (_hwReason[r.homework_id] || {})[r.user_id] || '';
       const cur = (_hwStatus[r.homework_id] || {})[r.user_id] || '';
-      const reviewer = (_hwReviewedBy[r.homework_id] || {})[r.user_id] || '';
-      if (cur === r.status && curReason === (r.reason || '') && reviewer === (r.reviewed_by || '')) return;
-      (_hwReviewedBy[r.homework_id] = _hwReviewedBy[r.homework_id] || {})[r.user_id] = r.reviewed_by || '';
+      if (cur === r.status && curReason === (r.reason || '')) return;
       if (r.reason) (_hwReason[r.homework_id] = _hwReason[r.homework_id] || {})[r.user_id] = r.reason;
       else if (_hwReason[r.homework_id]) delete _hwReason[r.homework_id][r.user_id];
       (_hwStatus[r.homework_id] = _hwStatus[r.homework_id] || {})[r.user_id] = r.status;
