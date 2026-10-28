@@ -4580,9 +4580,33 @@ window.closeModal = (id) => { const el = $(id); if (el) el.classList.remove('sho
 // ---------- STUDENT: homework ----------
 let hwStaged = [];
 let hwCurrentId = null;
+let _studentHwStatusRequest = null;
+async function studentHomeworkStatuses(){
+  const actor = currentUser && currentUser.uid;
+  if (!actor) throw new Error('Sign in required.');
+  if (_studentHwStatusRequest && _studentHwStatusRequest.actor === actor) return _studentHwStatusRequest.promise;
+  const request = { actor };
+  request.promise = (async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session || session.user.id !== actor) throw new Error('Please sign in again.');
+    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 20000);
+    try {
+      const response = await fetch('/api/homework-status', { method: 'POST',
+        headers: { Authorization: 'Bearer ' + session.access_token }, cache: 'no-store', signal: controller.signal });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || 'Could not verify saved homework results.');
+      if (!body.statuses || typeof body.statuses !== 'object' || Array.isArray(body.statuses)) throw new Error('Saved results were not confirmed.');
+      if (!currentUser || currentUser.uid !== actor) throw new Error('Account changed.');
+      return body.statuses;
+    } finally { clearTimeout(timer); }
+  })().finally(() => { if (_studentHwStatusRequest === request) _studentHwStatusRequest = null; });
+  _studentHwStatusRequest = request;
+  return request.promise;
+}
 async function renderStuHomework(){
   const wrap = $('stu-homework');
-  let hwList = [], subs = [];
+  const actor = currentUser.uid;
+  let hwList = [], subs = [], savedStatuses = {};
   try {
     // Newest first — most recently assigned at the top.
     hwList = await list('homework', {
@@ -4590,20 +4614,24 @@ async function renderStuHomework(){
       order: ['created_at', false]
     });
     subs = await list('submissions', { eq: { user_id: currentUser.uid } });
-  } catch (e) { wrap.innerHTML = '<div class="empty">Couldn\'t load homework.</div>'; return; }
+    savedStatuses = await studentHomeworkStatuses();
+  } catch (e) { if (currentUser && currentUser.uid === actor) wrap.innerHTML = '<div class="empty">Couldn\'t verify your saved homework results. Please refresh before uploading again.</div>'; return; }
+  if (!currentUser || currentUser.uid !== actor) return;
   DATA.homework = hwList;
   const subByHw = {};
   subs.forEach(s => { subByHw[s.homework_id] = s; });
   if (!hwList.length){ wrap.innerHTML = '<div class="empty">No homework yet.</div>'; return; }
   wrap.innerHTML = hwList.map(h => {
     const sub = subByHw[h.id];
+    const savedStatus = (savedStatuses[h.id] || {}).status || '';
+    const alreadyDone = savedStatus === 'submitted' || savedStatus === 'excused';
     // Exact deadlines (new homework) close at the instant; legacy date-only rows keep the
     // old "late after the day" behaviour and are never closed.
-    const closed = !sub && hwClosed(h);
-    const isLate = !sub && (closed || (!hwDeadline(h) && h.due_date && new Date(h.due_date) < new Date(todayStr())));
-    const cls = sub ? 'submitted' : (isLate ? 'late' : 'pending');
-    const label = sub ? 'Submitted' : (closed ? 'Closed' : (isLate ? 'Late' : 'Pending'));
-    const tagClass = sub ? 'green' : (isLate ? 'red' : 'amber');
+    const closed = !sub && !alreadyDone && hwClosed(h);
+    const isLate = !sub && !alreadyDone && (closed || (!hwDeadline(h) && h.due_date && new Date(h.due_date) < new Date(todayStr())));
+    const cls = sub || alreadyDone ? 'submitted' : (isLate ? 'late' : 'pending');
+    const label = sub ? 'Submitted' : ({ submitted: 'Submitted', incomplete: 'Incomplete', missing: 'Missing', excused: 'Excused' }[savedStatus] || (closed ? 'Closed' : (isLate ? 'Late' : 'Pending')));
+    const tagClass = sub || savedStatus === 'submitted' ? 'green' : savedStatus === 'excused' ? 'blue' : (isLate ? 'red' : 'amber');
     return (
       '<div class="hw-row">' +
         '<div class="hw-dot ' + cls + '"></div>' +
@@ -4616,7 +4644,9 @@ async function renderStuHomework(){
             ? ('<span class="check-pill">Submitted' + (photoPaths(sub.photos).length ? ' · ' + photoPaths(sub.photos).length + ' file(s)' : '') + '</span>' +
                // Until the deadline a submission stays open to its owner: add, remove, replace.
                (hwClosed(h) ? '' : '<button class="btn btn-dark btn-sm" onclick="openHwModal(\'' + esc(h.id) + '\', true)">Edit</button>'))
-            : (closed
+            : alreadyDone
+              ? '<span class="check-pill">' + (savedStatus === 'excused' ? 'Excused — no submission required' : 'Submitted — saved result') + '</span>'
+              : (closed
                 ? '<span class="check-pill closed">Submissions closed</span>'
                 : '<button class="btn btn-primary btn-sm" onclick="openHwModal(\'' + esc(h.id) + '\')">Submit</button>')) +
         '</div>' +
@@ -5078,6 +5108,12 @@ window.renderStuDash = async () => {
       views = (v && v.data) || [];
     }
   } catch(e){ console.warn('[dashboard] student home:', e && (e.message || e)); }
+  let savedHomework = {}, savedHomeworkKnown = !P.homework;
+  if (P.homework){
+    try { savedHomework = await studentHomeworkStatuses(); savedHomeworkKnown = true; }
+    catch(e){ console.warn('[dashboard] saved homework:', e.message || e); }
+  }
+  if (!currentUser || currentUser.uid !== uid) return;
 
   const row = (title, sub, side, wrapTitle) =>
     '<div class="prow"><div class="pr-main"><div class="pr-t' + (wrapTitle ? ' wrap' : '') + '">' + title + '</div>' +
@@ -5088,11 +5124,18 @@ window.renderStuDash = async () => {
 
   // ---- THIS WEEK: next homework + latest recording, as two rows of one panel
   const doneIds = new Set(subs.map(s => s.homework_id));
+  Object.entries(savedHomework).forEach(([id, result]) => {
+    if (result.status === 'submitted' || result.status === 'excused') doneIds.add(id);
+  });
   const pending = hw.filter(x => !doneIds.has(x.id))
     .sort((a, b) => String(a.due_date || '9999').localeCompare(String(b.due_date || '9999')));
   const next = pending[0];
   let hwRow = '';
   if (!P.homework){ hwRow = ''; }
+  else if (!savedHomeworkKnown){
+    hwRow = row('Homework', 'Could not verify saved results. Refresh before submitting again.',
+      '<button class="btn btn-dark btn-sm" onclick="stuShow(\'homework\')">View homework</button>');
+  }
   else if (next){
     const n = daysUntil(next.due_date);
     const closed = hwClosed(next);
@@ -5184,7 +5227,7 @@ window.renderStuDash = async () => {
 // ---------- STUDENT: my progress (marks / homework / attendance, for student + parent) ----------
 window.renderStuStats = async () => {
   const uid = currentUser.uid;
-  let marks=[], att=[], hw=[], subs=[], results=[];
+  let marks=[], att=[], hw=[], subs=[], results=[], savedHomework={};
   try {
     [marks, att, hw, subs, results] = await Promise.all([
       list('marks', { eq: { user_id: uid }, order: ['created_at', true] }),   // oldest→newest = progress
@@ -5193,7 +5236,9 @@ window.renderStuStats = async () => {
       list('submissions', { eq: { user_id: uid } }),
       list('homework_results', { eq: { user_id: uid } })   // permanent, finalized outcomes
     ]);
+    savedHomework = await studentHomeworkStatuses();
   } catch (e) { const el = $('stu-stats-marks'); if (el) el.innerHTML = '<div class="empty">Couldn\'t load your progress.</div>'; return; }
+  if (!currentUser || currentUser.uid !== uid) return;
   // MARKS — % per exam (in order) with the 1–9 grade, plus average & best (both as % and grade)
   const mItems = marks.map(m => { const pct = m.total ? Math.round(100*m.score/m.total) : 0; return { label: m.exam, value: pct, display: pct + '% · ' + gradeFor(pct) }; });
   const avgM = mItems.length ? Math.round(mItems.reduce((a,b)=>a+b.value,0)/mItems.length) : 0;
@@ -5207,11 +5252,17 @@ window.renderStuStats = async () => {
   const cnt = { submitted:0, incomplete:0, missing:0, excused:0 };
   results.forEach(r => { const st = (r.status === 'cancelled') ? 'missing' : r.status; if (cnt[st] != null) cnt[st]++; });
   const subByHw = {}; subs.forEach(s => subByHw[s.homework_id] = s);
-  const pending = hw.length;
+  const savedResultIds = new Set(results.map(r => r.id));
+  const activeToCount = hw.filter(h => !savedResultIds.has((savedHomework[h.id] || {}).result_id));
+  const pending = activeToCount.filter(h => !['submitted','excused'].includes((savedHomework[h.id] || {}).status)).length;
   const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
   const barVal = { submitted:100, incomplete:60, missing:0, excused:100 };
   const finItems = results.map(r => { const st = (r.status === 'cancelled') ? 'missing' : r.status; return { label: r.homework_title, value: barVal[st] != null ? barVal[st] : 0, display: cap(st) }; });
-  const actItems = hw.map(h => ({ label: h.title, value: subByHw[h.id] ? 80 : 0, display: subByHw[h.id] ? 'Submitted (pending review)' : 'Not submitted yet' }));
+  const actItems = activeToCount.map(h => {
+    const status = (savedHomework[h.id] || {}).status;
+    return { label: h.title, value: subByHw[h.id] ? 80 : barVal[status] || 0,
+      display: subByHw[h.id] ? 'Submitted (pending review)' : status ? cap(status) : 'Not submitted yet' };
+  });
   const hwBoxes = [
     { n: String(cnt.submitted),  l: 'submitted' },
     { n: String(cnt.incomplete), l: 'incomplete' },
